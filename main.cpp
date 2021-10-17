@@ -35,7 +35,7 @@ int main(int argc, char const *argv[])
     /* Comprobación inicial variables */
     if (argc != 6)
     {
-        cerr << "Número de argumentos incorrecto\n";
+        std::cerr << "Número de argumentos incorrecto\n";
         return -1;
     }
 
@@ -62,7 +62,7 @@ int main(int argc, char const *argv[])
     cout << "time_step: " << time_step << "\n";
 
     /* Coordenadas aleatorias */
-    mt19937 gen(random_seed);
+    mt19937_64 gen(random_seed);
     uniform_real_distribution<double> position_dist(0.0, nextafter(size_enclosure, std::numeric_limits<double>::max()));
     normal_distribution<double> mass_dist(M, SDM);
 
