@@ -17,7 +17,8 @@ const double GRAVITY_CONST = 6.674 * pow(10, -11); // Constante gravedad univers
 const double M = pow(10, 21);                      // Media (distribución normal)
 const double SDM = pow(10, 15);                    // Desviación (distribución normal)
 
-/* ESTRUCTURA OBJETO*/
+/* ESTRUCTURAS */
+/* Estructura objeto */
 struct object
 {
     double pos_x;
@@ -29,13 +30,15 @@ struct object
     double mass;
 };
 
+/* Estructura vector_elem */
 struct vector_elem
 {
     double x;
     double y;
     double z;
 };
-/* Declaración previa de las funciones */
+
+/* DECLARACIÓN PREVIA DE FUNCIONES */
 void vector_gravitational_force(object object_1, object object_2, double* forces);
 void calc_gravitational(int num_objects, int index_1, object* objects, double* forces);
 void vector_acceleration(object object_1, double* forces, vector_elem* acceleration);
@@ -93,39 +96,41 @@ int main(int argc, char const *argv[])
     /* Creación de objetos */
     for (int i = 0; i < num_objects; i++)
     {
-        // Igual meter variables para ver si mejora rendimiento
-        objects[i].pos_x = position_dist(gen);
+        objects[i].pos_x = position_dist(gen); // Posicion x, y, z
         objects[i].pos_y = position_dist(gen);
         objects[i].pos_z = position_dist(gen);
-        objects[i].speed_x = 0;
+        objects[i].speed_x = 0; // Velocidad x, y, z
         objects[i].speed_y = 0;
         objects[i].speed_z = 0;
-        objects[i].mass = mass_dist(gen);
+        objects[i].mass = mass_dist(gen); // Masa
 
         // Ponemos la precisión a 3 decimales. Imprimimos el objeto
         file_init << fixed << setprecision(3) << objects[i].pos_x << " " << objects[i].pos_y << " " << objects[i].pos_z << " " << objects[i].speed_x << " " << objects[i].speed_y << " " << objects[i].speed_z << " " << objects[i].mass << endl;
     }
 
-    file_init.close(); // Cerramos el fichero
+    file_init.close(); // Cerramos el fichero "init_config.txt"
 
-    /* Comprobar que no hay colisiones antes de las iteraciones */
+    /* TODO Comprobar que no hay colisiones antes de las iteraciones */
 
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
-        /* Bucle obtener nueva posición de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
         for (int i = 0; i < num_objects; i++){
-            if (objects[i].mass!=NULL){
+            if (objects[i].mass!=NULL){ // Solo entrarán en el condicional objetos que no se han eliminado
+
+                // Cálculo de la fuerza gravitatoria
                 double forces[3] = {0,0,0};
                 calc_gravitational(num_objects, i, objects, forces);
 
+                // Cálculo del vector aceleración
                 vector_elem *acceleration;
                 vector_acceleration(objects[i], forces, acceleration);
                 
-                /* Calculamos la velocidad del objeto para obtener la posición */
+                // Cálculo del vector velocidad
                 vector_speed(&objects[i], acceleration, time_step);
 
-                // Vector posiciones
+                // Cálculo del vector posiciones
                 vector_position(&objects[i], time_step);
 
                 // Comprobar bordes
@@ -140,24 +145,29 @@ int main(int argc, char const *argv[])
             for (int j = 0; j < num_objects-i-1; j++){ 
                 // Se resta i y 1 para evitar comprobaciones dobles
                 // Comprobar colisiones
-                if (i!=j && objects[i].mass!=NULL && objects[j].mass!=NULL){
-                    if (check_collision(objects[i], objects[j])){
+                if (i!=j && objects[i].mass!=NULL && objects[j].mass!=NULL){ // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
+                    if (check_collision(objects[i], objects[j])){ // Comprobar colisión
+
+                        // Actualización de la masa y velocidades del nuevo objeto resultante
                         objects[i].mass += objects[j].mass;
                         objects[i].speed_x += objects[j].speed_x;
                         objects[i].speed_y += objects[j].speed_y;
                         objects[i].speed_z += objects[j].speed_z;
+
+                        // Eliminación (masa = NULL) del segundo objeto que ha colisionado
                         num_objects_after_delete -= 1;
-                        objects[i].mass = NULL;
+                        objects[j].mass = NULL;
                         cout<<num_objects_after_delete<<"\n";
                     }
                 }
             }
         }
         
-        // Cambiar array objects
-        int counter = 0;
+        // Actualizar array objects debido a colisiones
+        int counter = 0; // Contador que recorrerá los objetos de nuestro array hasta borrar los colisionados
+
         while (counter<num_objects_after_delete){
-            if (objects[counter].mass==NULL){
+            if (objects[counter].mass==NULL){ // Si el objeto tiene masa=NULL -> ha sido eliminado y hay que actualizar el array
                 for (int i = 0; i<num_objects-counter-1; i++){
                     objects[i+counter]=objects[i+counter+1];
                     // num_objects = 4; counter = 0 i<3
@@ -176,10 +186,11 @@ int main(int argc, char const *argv[])
                 }
 
                 num_objects -= 1;
-            }else{
-                counter++;
+            }else{ // Si el objeto tiene masa!=NULL -> no hay que actualizar el array
+                counter++; // Aumentamos el contador
             }
         }
+        
         cout<<"Fin iteración: "<<iteration<<" Num objetos:"<<num_objects<<"\n";
     }
 
@@ -210,8 +221,10 @@ void calc_gravitational(int num_objects, int index_1, object* objects, double* f
     }
 }
 
+/* Vector aceleración */
 void vector_acceleration(object object_1, double* forces, vector_elem* acceleration)
 {
+    /* Cálculo del vector aceleración */
     acceleration->x= forces[0]/object_1.mass;
     acceleration->y= forces[1]/object_1.mass;
     acceleration->z= forces[2]/object_1.mass;
@@ -276,9 +289,9 @@ void check_border(object *object_1, float size_enclosure)
     }
 }
 
+/* Comprobar colisión entre dos objetos (distancia euclídea entre objetos menor que 1) */
 bool check_collision(object object_1, object object_2)
 {
-    /* Comprobar si colisionan (distancia euclídea entre 1 y 2 menor que 1) */
     if (euclidean_norm(object_1, object_2) < 1)
     {
         return true;
