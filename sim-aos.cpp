@@ -36,13 +36,12 @@ struct vector_elem
     double z;
 };
 /* Declaración previa de las funciones */
-vector_elem *vector_gravitational_force(object object_1, object object_2);
-vector_elem *all_vector_acceleration(object *objects, vector_elem **force_matrix, int num_objects);
-vector_elem *operate_forces(vector_elem force_1, vector_elem force_2, int type);
-vector_elem *divide_mass(vector_elem force, double mass);
-void vector_speed(object object_1, vector_elem acceleration, int time_step);
-void vector_position(object object_1, int time_step);
-void check_border(object object_1, int size_enclosure);
+void vector_gravitational_force(object object_1, object object_2, double* forces);
+void calc_gravitational(int num_objects, int index_1, object* objects, double* forces);
+void vector_acceleration(object object_1, double* forces, vector_elem* acceleration);
+void vector_speed(object *object_1, vector_elem *acceleration, float time_step);
+void vector_position(object *object_1, float time_step);
+void check_border(object *object_1, float size_enclosure);
 bool check_collision(object object_1, object object_2);
 
 /* MAIN */
@@ -109,86 +108,52 @@ int main(int argc, char const *argv[])
 
     file_init.close(); // Cerramos el fichero
 
-    /* Declaración matriz de fuerzas */
-    vector_elem **force_matrix[num_objects - 1];
-    for (int i = 0; i < (num_objects - 1); i++)
-    {
-        vector_elem *force_vector[num_objects - 1 - i];
-        force_matrix[i] = force_vector;
-    }
-    //cout<<"Matriz fuerzas creada \n";
-
     /* Comprobar que no hay colisiones antes de las iteraciones */
 
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
-        /* Bucle rellenar matriz de fuerzas*/
-        for (int i = 0; i < (num_objects-1); i++){
-            for (int j = 0; j < (num_objects-i-1); j++){
-                vector_elem force;
-                force.x = vector_gravitational_force(objects[i], objects[i + j + 1])->x;
-                force.y = vector_gravitational_force(objects[i], objects[i + j + 1])->y;
-                force.z = vector_gravitational_force(objects[i], objects[i + j + 1])->z;
-                force_matrix[i][j] = &force;
-                cout<<"H: "<<force_matrix[i][j]<<"\n";
-            }    
-        }
-        //cout<<"Matriz fuerzas rellenada \n";
-
-        // PYTHON
-        // for i in range(len(force_matrix)):
-        //     for j in range(len(force_matrix[i])):
-        //         force_matrix[i][j] = vector_gravitational_force(objeto[i],objeto[i+j+1])
-
-        // Calcular todas las aceleraciones
-        vector_elem *acceleration = (vector_elem*) malloc(sizeof(vector_elem)*num_objects);
-        acceleration = all_vector_acceleration(objects, *force_matrix, num_objects);
-        //cout<<"Aceleracion obtenida \n";
-
         /* Bucle obtener nueva posición de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
         for (int i = 0; i < num_objects; i++){
-            /* Calculamos la velocidad del objeto para obtener la posición */
-            cout<<i<<" acc x: "<<acceleration[i].x<<"  acc y: "<<acceleration[i].y<<"  acc z: "<<acceleration[i].z<<"\n";
-            vector_speed(objects[i], acceleration[i], time_step);
-            cout<<i<<" Posx: "<<objects[i].pos_x<<"  Posy: "<<objects[i].pos_y<<"  Posz: "<<objects[i].pos_z<<"\n";
-            cout<<i<<" Speedx: "<<objects[i].speed_x<<"  Speedy: "<<objects[i].speed_y<<"  Speedz: "<<objects[i].speed_z<<"\n";
+            if (objects[i].mass!=NULL){
+                double forces[3] = {0,0,0};
+                calc_gravitational(num_objects, i, objects, forces);
 
-            // Comprobar bordes
-            check_border(objects[i], size_enclosure);
-            cout<<i<<" Speedx: "<<objects[i].speed_x<<"  Speedy: "<<objects[i].speed_y<<"  Speedz: "<<objects[i].speed_z<<"\n";
+                vector_elem *acceleration;
+                vector_acceleration(objects[i], forces, acceleration);
+                
+                /* Calculamos la velocidad del objeto para obtener la posición */
+                vector_speed(&objects[i], acceleration, time_step);
 
-            // Vector posiciones
-            vector_position(objects[i], time_step);
-            cout<<i<<" Posx: "<<objects[i].pos_x<<"  Posy: "<<objects[i].pos_y<<"  Posz: "<<objects[i].pos_z<<"\n";
-        }
+                // Vector posiciones
+                vector_position(&objects[i], time_step);
 
+                // Comprobar bordes
+                check_border(&objects[i], size_enclosure);
+            }
+        } 
         //cout<<"Nuevas posiciones calculadas \n";
 
         /* Bucle anidado para comprobar colisiones entre objetos */
         int num_objects_after_delete = num_objects;
         for (int i = 0; i < num_objects; i++){
-            for (int j = 0; j < num_objects - i - 1; j++){ 
-            // Se resta i y 1 para evitar comprobaciones dobles
-            // Comprobar colisiones
+            for (int j = 0; j < num_objects-i-1; j++){ 
+                // Se resta i y 1 para evitar comprobaciones dobles
+                // Comprobar colisiones
                 if (i!=j && objects[i].mass!=NULL && objects[j].mass!=NULL){
                     if (check_collision(objects[i], objects[j])){
-                        object new_object;
-                        new_object.mass = objects[i].mass + objects[j].mass;
-                        new_object.speed_x = objects[i].speed_x + objects[j].speed_x;
-                        new_object.speed_y = objects[i].speed_y + objects[j].speed_y;
-                        new_object.speed_z = objects[i].speed_z + objects[j].speed_z;
-                        new_object.pos_x = objects[i].pos_x + objects[j].pos_x;
-                        new_object.pos_y = objects[i].pos_y + objects[j].pos_y;
-                        new_object.pos_z = objects[i].pos_z + objects[j].pos_z;
-                        objects[i] = new_object;
-                        objects[j].mass = NULL;
+                        objects[i].mass += objects[j].mass;
+                        objects[i].speed_x += objects[j].speed_x;
+                        objects[i].speed_y += objects[j].speed_y;
+                        objects[i].speed_z += objects[j].speed_z;
                         num_objects_after_delete -= 1;
-                        cout<<"Colision\n";
+                        objects[i].mass = NULL;
+                        cout<<num_objects_after_delete<<"\n";
                     }
                 }
             }
         }
+        
         // Cambiar array objects
         int counter = 0;
         while (counter<num_objects_after_delete){
@@ -209,27 +174,13 @@ int main(int argc, char const *argv[])
 
                     // num_objects = 4; counter = 3 i<0
                 }
-                // delete last element array 
 
                 num_objects -= 1;
             }else{
                 counter++;
             }
         }
-        /*
-        // Borrar la matriz de fuerzas
-        for (int i = 0; i<num_objects-1; i++ ){
-            delete force_matrix[i];
-        }
-        // Volver a crearla
-        vector_elem *force_matrix[num_objects - 1];
-        for (int i = 0; i < (num_objects - 1); i++)
-        {
-            vector_elem force_vector[num_objects - 1 - i];
-            force_matrix[i] = force_vector;
-        }
-        */
-        cout<<"Fin iteración: "<<iteration<<"\n";
+        cout<<"Fin iteración: "<<iteration<<" Num objetos:"<<num_objects<<"\n";
     }
 
 }
@@ -242,131 +193,86 @@ double euclidean_norm(object object_1, object object_2)
 }
 
 /* Fuerza gravitatoria entre dos objetos */
-vector_elem *vector_gravitational_force(object object_1, object object_2)
+void vector_gravitational_force(object object_1, object object_2, double* forces)
 {
-    // double force_module = (GRAVITY_CONST * object_1.mass * object_2.mass) / (pow(euclidean_norm(object_1, object_2), 3));
-    // vector_elem *result = (vector_elem*) malloc(sizeof(vector_elem));
-    // result->x = force_module * (object_1.pos_x - object_2.pos_x);
-    // result->y = force_module * (object_1.pos_y - object_2.pos_y);
-    // result->z = force_module * (object_1.pos_z - object_2.pos_z);
-    // return result;
-    vector_elem *result = (vector_elem*) malloc(sizeof(vector_elem));
-    result->x =(GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_x - object_2.pos_x)) / (pow(euclidean_norm(object_1, object_2), 3));
-    result->y =(GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_y - object_2.pos_y)) / (pow(euclidean_norm(object_1, object_2), 3));
-    result->z =(GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_z - object_2.pos_z)) / (pow(euclidean_norm(object_1, object_2), 3));
-    return result;
+    double force_module = (GRAVITY_CONST * object_1.mass * object_2.mass) / (pow(euclidean_norm(object_1, object_2), 3));
+    forces[0] += force_module * (object_1.pos_x - object_2.pos_x);
+    forces[1] += force_module * (object_1.pos_y - object_2.pos_y);
+    forces[2] += force_module * (object_1.pos_z - object_2.pos_z);
 }
 
-/* Vector de aceleración */
-vector_elem *all_vector_acceleration(object *objects, vector_elem **force_matrix, int num_objects){
-    /* PYTHON (calculate all forces)
-    matriz = [[1,2,3], [4,5], [6]]
-    objeto = [0,0,0,0]
-    for i in range(len(matriz)):
-        for j in range(len(matriz[i])):
-            objeto[i] += matriz[i][j]
-            objeto[i+j+1] -= matriz[i][j]
-    */
-    // vector_elem *new_acceleration[num_objects];
-    cout<<"H: "<<force_matrix[0][0].x<<"\n";
-    vector_elem *new_acceleration = (vector_elem*) malloc(sizeof(vector_elem)*num_objects);
-    for (int i = 0; i < num_objects; i++){
-        for (int j = 0; j < num_objects - i - 1; j++)
-        {
-            new_acceleration[i] = *operate_forces(new_acceleration[i], force_matrix[i][j], 1);
-            new_acceleration[i + j + 1] = *operate_forces(new_acceleration[i + j + 1], force_matrix[i][j], -1);
+/* Fuerza gravitatoria de 1 objeto */
+void calc_gravitational(int num_objects, int index_1, object* objects, double* forces){
+    for (int j=0; j<num_objects; j++){
+        if (j!=index_1){
+            vector_gravitational_force(objects[j], objects[index_1], forces);
         }
     }
-
-    for (int i = 0; i < num_objects; i++){
-        cout<<i<<" acc x: "<<new_acceleration[i].x<<"  acc y: "<<new_acceleration[i].y<<"  acc z: "<<new_acceleration[i].z<<"\n";
-    }
-
-    for (int i = 0; i < num_objects; i++){
-        new_acceleration[i] = *divide_mass(new_acceleration[i], objects[i].mass);
-        cout<<i<<" acc x: "<<new_acceleration[i].x<<"  acc y: "<<new_acceleration[i].y<<"  acc z: "<<new_acceleration[i].z<<"\n";
-    }
-    return new_acceleration;
 }
 
-vector_elem *operate_forces(vector_elem force_1, vector_elem force_2, int type)
+void vector_acceleration(object object_1, double* forces, vector_elem* acceleration)
 {
-    // type = 1 suma y type = -1 resta
-    vector_elem new_force;
-    new_force.x = force_1.x + (type * force_2.x);
-    new_force.y = force_1.y + (type * force_2.y);
-    new_force.z = force_1.z + (type * force_2.z);
-    return &new_force;
-}
-
-vector_elem *divide_mass(vector_elem force, double mass)
-{
-    vector_elem *new_acceleration = (vector_elem*) malloc(sizeof(vector_elem));
-    new_acceleration->x = force.x / mass;
-    new_acceleration->y = force.y / mass;
-    new_acceleration->z = force.z / mass;
-    return new_acceleration;
+    acceleration->x= forces[0]/object_1.mass;
+    acceleration->y= forces[1]/object_1.mass;
+    acceleration->z= forces[2]/object_1.mass;
 }
 
 /* Vector velocidad */
-void vector_speed(object object_1, vector_elem acceleration, int time_step)
-{   
+void vector_speed(object *object_1, vector_elem *acceleration, float time_step)
+{      
     /* Cálculo del vector velocidad */
-    object_1.speed_x = object_1.speed_x + (acceleration.x * time_step);
-    object_1.speed_y = object_1.speed_y + (acceleration.y * time_step);
-    object_1.speed_z = object_1.speed_z + (acceleration.z * time_step);
-
+    object_1->speed_x = object_1->speed_x + (acceleration->x * time_step);
+    object_1->speed_y = object_1->speed_y + (acceleration->y * time_step);
+    object_1->speed_z = object_1->speed_z + (acceleration->z * time_step);
 }
 
 /* Vector de posicion */
-void vector_position(object object_1, int time_step)
+void vector_position(object *object_1, float time_step)
 {
-
     /* Cálculo del vector posición */
-    object_1.pos_x = object_1.pos_x + (object_1.speed_x * time_step);
-    object_1.pos_y = object_1.pos_y + (object_1.speed_y * time_step);
-    object_1.pos_z = object_1.pos_z + (object_1.speed_z * time_step);
+    object_1->pos_x = object_1->pos_x + (object_1->speed_x * time_step);
+    object_1->pos_y = object_1->pos_y + (object_1->speed_y * time_step);
+    object_1->pos_z = object_1->pos_z + (object_1->speed_z * time_step);
 
 }
 
 /* Función para recolocar al objeto si traspasa los límites */
-void check_border(object object_1, int size_enclosure)
+void check_border(object *object_1, float size_enclosure)
 {
-
     /* Checks posición x */
-    if (object_1.pos_x <= 0)
+    if (object_1->pos_x <= 0)
     {
-        object_1.pos_x = 0;
-        object_1.speed_x = -(object_1.speed_x);
+        object_1->pos_x = 0;
+        object_1->speed_x = -1 * object_1->speed_x;
     }
-    else if (object_1.pos_x >= size_enclosure)
+    else if (object_1->pos_x >= size_enclosure)
     {
-        object_1.pos_x = size_enclosure;
-        object_1.speed_x = -(object_1.speed_x);
+        object_1->pos_x = size_enclosure;
+        object_1->speed_x = -1 * (object_1->speed_x);
     }
 
     /* Checks posición y */
-    if (object_1.pos_y <= 0)
+    if (object_1->pos_y <= 0)
     {
-        object_1.pos_y = 0;
-        object_1.speed_y = -(object_1.speed_y);
+        object_1->pos_y = 0;
+        object_1->speed_y = -1 * (object_1->speed_y);
     }
-    else if (object_1.pos_y >= size_enclosure)
+    else if (object_1->pos_y >= size_enclosure)
     {
-        object_1.pos_y = size_enclosure;
-        object_1.speed_y = -(object_1.speed_y);
+        object_1->pos_y = size_enclosure;
+        object_1->speed_y = -1 * (object_1->speed_y);
     }
 
     /* Checks posición z */
-    if (object_1.pos_z <= 0)
+    if (object_1->pos_z <= 0)
     {
-        object_1.pos_z = 0;
-        object_1.speed_z = -(object_1.speed_z);
+        object_1->pos_z = 0;
+        object_1->speed_z = -1 * object_1->speed_z;
     }
-    else if (object_1.pos_z >= size_enclosure)
+    else if (object_1->pos_z >= size_enclosure)
     {
-        object_1.pos_z = size_enclosure;
-        object_1.speed_z = -(object_1.speed_z);
+        object_1->pos_z = size_enclosure;
+        object_1->speed_z =  -1 * object_1->speed_z;
     }
 }
 
