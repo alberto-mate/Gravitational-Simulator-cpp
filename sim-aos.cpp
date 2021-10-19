@@ -40,7 +40,7 @@ struct vector_elem
 
 /* DECLARACIÓN PREVIA DE FUNCIONES */
 void vector_gravitational_force(object object_1, object object_2, double* forces);
-void calc_gravitational(int num_objects, int index_1, object* objects, double* forces);
+void calc_gravitational(int num_objects, int index_1, vector<object> &objects, double* forces);
 void vector_acceleration(object object_1, double* forces, vector_elem* acceleration);
 void vector_speed(object *object_1, vector_elem *acceleration, float time_step);
 void vector_position(object *object_1, float time_step);
@@ -86,8 +86,9 @@ int main(int argc, char const *argv[])
     normal_distribution<double> mass_dist(M, SDM);
 
     /* AOS - Array of Structs */
-    object *objects = (object*) malloc(sizeof(object)*num_objects);
-
+    //object *objects = (object*) malloc(sizeof(object)*num_objects);
+    vector<object> objects(num_objects);
+    
     /* Fichero de configuracion inicial */
     ofstream file_init;
     file_init.open("init_config.txt");
@@ -111,10 +112,11 @@ int main(int argc, char const *argv[])
     file_init.close(); // Cerramos el fichero "init_config.txt"
 
     /* TODO Comprobar que no hay colisiones antes de las iteraciones */
-
+    
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
+        cout << "\nIteracion " << iteration << "\n";
         /* Bucle para obtener nuevas propiedades de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
         for (int i = 0; i < num_objects; i++){
             if (objects[i].mass!=0.0){ // Solo entrarán en el condicional objetos que no se han eliminado
@@ -135,34 +137,36 @@ int main(int argc, char const *argv[])
 
                 // Comprobar bordes
                 check_border(&objects[i], size_enclosure);
+
+                cout << "Obj: " << i << " posx: " << objects[i].pos_x << " posy: " << objects[i].pos_y << " posz: " << objects[i].pos_z<< "\n";;
             }
         } 
         //cout<<"Nuevas posiciones calculadas \n";
 
         /* Bucle anidado para comprobar colisiones entre objetos */
-        int num_objects_after_delete = num_objects;
         for (int i = 0; i < num_objects; i++){
-            for (int j = 0; j < num_objects; j++){ // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
+            for (int j = i+1; j < num_objects; j++){ // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
                 // Se resta i y 1 para evitar comprobaciones dobles
                 // Comprobar colisiones
-                if (i!=j && objects[i].mass!=0.0 && objects[j].mass!=0.0){ // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
+                if (i!=j){ // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                     if (check_collision(objects[i], objects[j])){ // Comprobar colisión
 
-                        // Actualización de la masa y velocidades del nuevo objeto resultante
+                        // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                         objects[i].mass += objects[j].mass;
                         objects[i].speed_x += objects[j].speed_x;
                         objects[i].speed_y += objects[j].speed_y;
                         objects[i].speed_z += objects[j].speed_z;
 
-                        // Eliminación (masa = 0.0) del segundo objeto que ha colisionado
-                        num_objects_after_delete -= 1;
-                        objects[j].mass = 0.0;
+                        // Eliminación del segundo objeto que colisiona del sistema
+                        objects.erase(objects.begin()+j);
+                        j--;
                     }
                 }
             }
         }
-        cout<<num_objects_after_delete<<"\n";
-
+        
+        num_objects = objects.size();
+        /* 
         // Actualizar array objects debido a colisiones
         
         int counter = 0; // Contador que recorrerá los objetos de nuestro array hasta borrar los colisionados
@@ -190,6 +194,7 @@ int main(int argc, char const *argv[])
             }
         }
         num_objects = num_objects_after_delete;
+        */
 
         cout<<"Fin iteración: "<<iteration<<" Num objetos:"<<num_objects<<"\n";
     }
@@ -204,16 +209,15 @@ double euclidean_norm(object object_1, object object_2)
 }
 
 /* Fuerza gravitatoria entre dos objetos */
-void vector_gravitational_force(object object_1, object object_2, double* forces)
-{
-    double force_module = (GRAVITY_CONST * object_1.mass * object_2.mass) / (pow(euclidean_norm(object_1, object_2), 3));
-    forces[0] += force_module * (object_1.pos_x - object_2.pos_x);
-    forces[1] += force_module * (object_1.pos_y - object_2.pos_y);
-    forces[2] += force_module * (object_1.pos_z - object_2.pos_z);
+void vector_gravitational_force(object object_1, object object_2, double* forces){
+    //double force_module = (GRAVITY_CONST * object_1.mass * object_2.mass) / (pow(euclidean_norm(object_1, object_2), 3));
+    forces[0] += (GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_x - object_2.pos_x)) / (pow(euclidean_norm(object_1, object_2), 3));
+    forces[1] += (GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_y - object_2.pos_y)) / (pow(euclidean_norm(object_1, object_2), 3));
+    forces[2] += (GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_z - object_2.pos_z)) / (pow(euclidean_norm(object_1, object_2), 3));
 }
 
 /* Fuerza gravitatoria que ejerce un objeto */
-void calc_gravitational(int num_objects, int index_1, object* objects, double* forces){
+void calc_gravitational(int num_objects, int index_1, vector<object> &objects, double* forces){
     for (int j=0; j<num_objects; j++){
         if (j!=index_1){
             vector_gravitational_force(objects[j], objects[index_1], forces);
