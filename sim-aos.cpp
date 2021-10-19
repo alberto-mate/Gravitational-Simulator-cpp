@@ -86,7 +86,7 @@ int main(int argc, char const *argv[])
     normal_distribution<double> mass_dist(M, SDM);
 
     /* AOS - Array of Structs */
-    object objects[num_objects];
+    object *objects = (object*) malloc(sizeof(object)*num_objects);
 
     /* Fichero de configuracion inicial */
     ofstream file_init;
@@ -117,14 +117,14 @@ int main(int argc, char const *argv[])
     {
         /* Bucle para obtener nuevas propiedades de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
         for (int i = 0; i < num_objects; i++){
-            if (objects[i].mass!=NULL){ // Solo entrarán en el condicional objetos que no se han eliminado
+            if (objects[i].mass!=0.0){ // Solo entrarán en el condicional objetos que no se han eliminado
 
                 // Cálculo de la fuerza gravitatoria
                 double forces[3] = {0,0,0};
                 calc_gravitational(num_objects, i, objects, forces);
 
                 // Cálculo del vector aceleración
-                vector_elem *acceleration;
+                vector_elem *acceleration = (vector_elem*) malloc(sizeof(vector_elem));
                 vector_acceleration(objects[i], forces, acceleration);
                 
                 // Cálculo del vector velocidad
@@ -142,10 +142,10 @@ int main(int argc, char const *argv[])
         /* Bucle anidado para comprobar colisiones entre objetos */
         int num_objects_after_delete = num_objects;
         for (int i = 0; i < num_objects; i++){
-            for (int j = 0; j < num_objects-i-1; j++){ 
+            for (int j = 0; j < num_objects; j++){ // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
                 // Se resta i y 1 para evitar comprobaciones dobles
                 // Comprobar colisiones
-                if (i!=j && objects[i].mass!=NULL && objects[j].mass!=NULL){ // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
+                if (i!=j && objects[i].mass!=0.0 && objects[j].mass!=0.0){ // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                     if (check_collision(objects[i], objects[j])){ // Comprobar colisión
 
                         // Actualización de la masa y velocidades del nuevo objeto resultante
@@ -154,22 +154,22 @@ int main(int argc, char const *argv[])
                         objects[i].speed_y += objects[j].speed_y;
                         objects[i].speed_z += objects[j].speed_z;
 
-                        // Eliminación (masa = NULL) del segundo objeto que ha colisionado
+                        // Eliminación (masa = 0.0) del segundo objeto que ha colisionado
                         num_objects_after_delete -= 1;
-                        objects[j].mass = NULL;
-                        cout<<num_objects_after_delete<<"\n";
+                        objects[j].mass = 0.0;
                     }
                 }
             }
         }
-        
-        // Actualizar array objects debido a colisiones
-        int counter = 0; // Contador que recorrerá los objetos de nuestro array hasta borrar los colisionados
+        cout<<num_objects_after_delete<<"\n";
 
+        // Actualizar array objects debido a colisiones
+        
+        int counter = 0; // Contador que recorrerá los objetos de nuestro array hasta borrar los colisionados
         while (counter<num_objects_after_delete){
-            if (objects[counter].mass==NULL){ // Si el objeto tiene masa=NULL -> ha sido eliminado y hay que actualizar el array
+            if (objects[counter].mass==0.0){ // Si el objeto tiene masa=0.0 -> ha sido eliminado y hay que actualizar el array
                 for (int i = 0; i<num_objects-counter-1; i++){
-                    objects[i+counter]=objects[i+counter+1];
+                    objects[i+counter]=objects[i+counter+1]; // Mueve el resto de objetos para sustituir el eliminado
                     // num_objects = 4; counter = 0 i<3
                     // i=0 objects[0]=objects[1]
                     // i=1 objects[1]=objects[2]
@@ -185,12 +185,12 @@ int main(int argc, char const *argv[])
                     // num_objects = 4; counter = 3 i<0
                 }
 
-                num_objects -= 1;
-            }else{ // Si el objeto tiene masa!=NULL -> no hay que actualizar el array
+            }else{ // Si el objeto tiene masa!=0.0 -> no hay que actualizar el array
                 counter++; // Aumentamos el contador
             }
         }
-        
+        num_objects = num_objects_after_delete;
+
         cout<<"Fin iteración: "<<iteration<<" Num objetos:"<<num_objects<<"\n";
     }
 
@@ -212,7 +212,7 @@ void vector_gravitational_force(object object_1, object object_2, double* forces
     forces[2] += force_module * (object_1.pos_z - object_2.pos_z);
 }
 
-/* Fuerza gravitatoria de 1 objeto */
+/* Fuerza gravitatoria que ejerce un objeto */
 void calc_gravitational(int num_objects, int index_1, object* objects, double* forces){
     for (int j=0; j<num_objects; j++){
         if (j!=index_1){
