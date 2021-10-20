@@ -52,14 +52,14 @@ bool check_collision(object objects, int i, int j);
 int main(int argc, char const *argv[])
 {
 
-    /* Comprobación inicial variables */
+    /* Comprobación inicial argumentos */
     if (argc != 6)
     {
         cerr << "Número de argumentos incorrecto\n";
         return -1;
     }
 
-    /* Comprobación de valores iniciales de variables */
+    /* Comprobación de valores iniciales de argumentos */
     if ((atoi(argv[1]) <= 0 || atoi(argv[2]) <= 0 || atoi(argv[3]) <= 0 || atof(argv[4]) <= 0.0 || atof(argv[5]) <= 0.0) ||
         (atof(argv[1]) != atoi(argv[1]) || atof(argv[2]) != atoi(argv[2]) || atof(argv[3]) != atoi(argv[3])))
     {
@@ -91,7 +91,7 @@ int main(int argc, char const *argv[])
     cout << "size_enclosure: " << size_enclosure << "\n";
     cout << "time_step: " << time_step << "\n";
 
-    /* Coordenadas aleatorias */
+    /* Coordenadas y masas pseudoaleatorias */
     mt19937_64 gen(random_seed);
     uniform_real_distribution<double> position_dist(0.0, nextafter(size_enclosure, numeric_limits<double>::max()));
     normal_distribution<double> mass_dist{M, SDM};
@@ -118,19 +118,17 @@ int main(int argc, char const *argv[])
 
     file_init.close(); // Cerramos el fichero "init_config.txt"
 
-    /* TODO Comprobar que no hay colisiones antes de las iteraciones */
 
-    /* Bucle anidado para comprobar colisiones entre objetos */
+    /* Bucle anidado para comprobar colisiones entre objetos previas a las iteraciones */
     for (long unsigned int i = 0; i < objects.mass.size(); i++)
     {
         for (long unsigned int j = i + 1; j < objects.mass.size(); j++)
-        { // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
+        {
             // Comprobar colisiones
             if (i != j)
             { // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                 if (check_collision(objects, i, j))
                 {   // Comprobar colisión
-                    // No deben haberse borrado con anterioridad
                     // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
 
                     cout << "Collision objects " << i << " and " << j << endl;
@@ -138,6 +136,7 @@ int main(int argc, char const *argv[])
                     cout << "Obj: " << i << " posx: " << objects.pos_x[j] << " posy: " << objects.pos_y[j] << " posz: " << objects.pos_z[j] << " speedx: " << objects.speed_x[j] << " speedy: " << objects.speed_y[j] << " speedz: " << objects.speed_z[j] << " mass " << objects.mass[j] << "\n";
                     cout << "Body " << j << " removed" << endl;
 
+                    // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                     objects.mass[i] += objects.mass[j];
                     objects.speed_x[i] += objects.speed_x[j];
                     objects.speed_y[i] += objects.speed_y[j];
@@ -163,7 +162,7 @@ int main(int argc, char const *argv[])
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
         cout << "\nIteracion " << iteration << "\n";
-        /* Bucle para obtener nuevas propiedades de los objetos en la iteración. Comprueba también que no se haya pasado de los límites.*/
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
         for (int i = 0; i < num_objects; i++)
         {
             if (objects.mass[i] != 0.0)
@@ -200,13 +199,12 @@ int main(int argc, char const *argv[])
         for (long unsigned int i = 0; i < objects.mass.size(); i++)
         {
             for (long unsigned int j = i + 1; j < objects.mass.size(); j++)
-            { // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
+            {
                 // Comprobar colisiones
                 if (i != j)
                 { // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                     if (check_collision(objects, i, j))
                     {   // Comprobar colisión
-                        // No deben haberse borrado con anterioridad
                         // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
 
                         cout << "Collision objects " << i << " and " << j << endl;
@@ -235,6 +233,7 @@ int main(int argc, char const *argv[])
             }
         }
 
+        // Actualizamos el número de objetos en el vector
         num_objects = objects.mass.size();
         cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
     }
