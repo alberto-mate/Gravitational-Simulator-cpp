@@ -131,10 +131,10 @@ int main(int argc, char const *argv[])
                 {   // Comprobar colisión
                     // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
 
-                    cout << "Collision objects " << i << " and " << j << endl;
-                    cout << "Obj: " << i << " posx: " << objects.pos_x[i] << " posy: " << objects.pos_y[i] << " posz: " << objects.pos_z[i] << " speedx: " << objects.speed_x[i] << " speedy: " << objects.speed_y[i] << " speedz: " << objects.speed_z[i] << " mass " << objects.mass[i] << "\n";
-                    cout << "Obj: " << i << " posx: " << objects.pos_x[j] << " posy: " << objects.pos_y[j] << " posz: " << objects.pos_z[j] << " speedx: " << objects.speed_x[j] << " speedy: " << objects.speed_y[j] << " speedz: " << objects.speed_z[j] << " mass " << objects.mass[j] << "\n";
-                    cout << "Body " << j << " removed" << endl;
+                    //cout << "Collision objects " << i << " and " << j << endl;
+                    //cout << "Obj: " << i << " posx: " << objects.pos_x[i] << " posy: " << objects.pos_y[i] << " posz: " << objects.pos_z[i] << " speedx: " << objects.speed_x[i] << " speedy: " << objects.speed_y[i] << " speedz: " << objects.speed_z[i] << " mass " << objects.mass[i] << "\n";
+                    //cout << "Obj: " << i << " posx: " << objects.pos_x[j] << " posy: " << objects.pos_y[j] << " posz: " << objects.pos_z[j] << " speedx: " << objects.speed_x[j] << " speedy: " << objects.speed_y[j] << " speedz: " << objects.speed_z[j] << " mass " << objects.mass[j] << "\n";
+                    //cout << "Body " << j << " removed" << endl;
 
                     // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                     objects.mass[i] += objects.mass[j];
@@ -142,8 +142,9 @@ int main(int argc, char const *argv[])
                     objects.speed_y[i] += objects.speed_y[j];
                     objects.speed_z[i] += objects.speed_z[j];
 
-                    cout << "Object " << i << " after collapse" << endl;
-                    cout << "Obj: " << i << " posx: " << objects.pos_x[i] << " posy: " << objects.pos_y[i] << " posz: " << objects.pos_z[i] << " speedx: " << objects.speed_x[i] << " speedy: " << objects.speed_y[i] << " speedz: " << objects.speed_z[i] << " mass " << objects.mass[i] << "\n";
+                    //cout << "Object " << i << " after collapse" << endl;
+                    //cout << "Obj: " << i << " posx: " << objects.pos_x[i] << " posy: " << objects.pos_y[i] << " posz: " << objects.pos_z[i] << " speedx: " << objects.speed_x[i] << " speedy: " << objects.speed_y[i] << " speedz: " << objects.speed_z[i] << " mass " << objects.mass[i] << "\n";
+                    
                     // Lo borramos de los vectores
                     objects.pos_x.erase(objects.pos_x.begin() + j);
                     objects.pos_y.erase(objects.pos_y.begin() + j);
@@ -157,6 +158,9 @@ int main(int argc, char const *argv[])
             }
         }
     }
+
+    // Actualizamos el número de objetos en el vector
+    num_objects = objects.mass.size();
 
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
