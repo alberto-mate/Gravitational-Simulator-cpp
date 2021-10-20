@@ -14,8 +14,8 @@ using namespace std;
 
 /* CONSTANTES */
 const double GRAVITY_CONST = 6.674 * 1E-11; // Constante gravedad universal
-const double M = 1E21;                     // Media (distribución normal)
-const double SDM = 1E15;                   // Desviación (distribución normal)
+const double M = 1E21;                      // Media (distribución normal)
+const double SDM = 1E15;                    // Desviación (distribución normal)
 
 /* ESTRUCTURAS */
 /* Estructura objeto */
@@ -114,6 +114,40 @@ int main(int argc, char const *argv[])
 
     /* TODO Comprobar que no hay colisiones antes de las iteraciones */
 
+    /* Bucle anidado para comprobar colisiones entre objetos */
+    for (long unsigned int i = 0; i < objects.size(); i++)
+    {
+        for (long unsigned int j = i + 1; j < objects.size(); j++)
+        { // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
+            // Comprobar colisiones
+            if (i != j)
+            { // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
+                if (check_collision(objects[i], objects[j]))
+                {   // Comprobar colisión
+                    // No deben haberse borrado con anterioridad
+                    // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
+
+                    //cout << "Collision objects " << i << " and " << j << endl;
+                    //cout << "Obj: " << i << " posx: " << objects[i].pos_x << " posy: " << objects[i].pos_y << " posz: " << objects[i].pos_z << " speedx: " << objects[i].speed_x << " speedy: " << objects[i].speed_y << " speedz: " << objects[i].speed_z << " mass " << objects[i].mass << "\n";
+                    //cout << "Obj: " << j << " posx: " << objects[j].pos_x << " posy: " << objects[j].pos_y << " posz: " << objects[j].pos_z << " speedx: " << objects[j].speed_x << " speedy: " << objects[j].speed_y << " speedz: " << objects[j].speed_z << " mass " << objects[j].mass << "\n";
+
+                    //cout << "Body " << j << " removed" << endl;
+
+                    objects[i].mass += objects[j].mass;
+                    objects[i].speed_x += objects[j].speed_x;
+                    objects[i].speed_y += objects[j].speed_y;
+                    objects[i].speed_z += objects[j].speed_z;
+
+                    //cout << "Object " << i << " after collapse" << endl;
+                    //cout << "Obj: " << i << " posx: " << objects[i].pos_x << " posy: " << objects[i].pos_y << " posz: " << objects[i].pos_z << " speedx: " << objects[i].speed_x << " speedy: " << objects[i].speed_y << " speedz: " << objects[i].speed_z << " mass " << objects[i].mass << "\n";
+                    // Lo marcamos como objeto a borrar
+                    objects.erase(objects.begin() + j);
+                    j--;
+                }
+            }
+        }
+    }
+
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
@@ -138,6 +172,7 @@ int main(int argc, char const *argv[])
             }
         }
 
+
         /* Bucle para calcular posiciones y comprobar bordes */
         for (int i = 0; i < num_objects; i++)
         {
@@ -150,58 +185,42 @@ int main(int argc, char const *argv[])
         }
         // cout<<"Nuevas posiciones calculadas \n";
 
-        int *deletes = (int*)malloc(sizeof(int)*num_objects); // Array que identifica objetos a borrar
-
         /* Bucle anidado para comprobar colisiones entre objetos */
-        for (int i = 0; i < num_objects; i++)
+        for (long unsigned int i = 0; i < objects.size(); i++)
         {
-            for (int j = i + 1; j < num_objects; j++)
+            for (long unsigned int j = i + 1; j < objects.size(); j++)
             { // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
                 // Comprobar colisiones
                 if (i != j)
                 { // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                     if (check_collision(objects[i], objects[j]))
-                    { // Comprobar colisión
-                        if (deletes[j] != 1 && deletes[i] != 1)
-                        { // No deben haberse borrado con anterioridad
-                            // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
-                            objects[i].mass += objects[j].mass;
-                            objects[i].speed_x += objects[j].speed_x;
-                            objects[i].speed_y += objects[j].speed_y;
-                            objects[i].speed_z += objects[j].speed_z;
+                    {   // Comprobar colisión
+                        // No deben haberse borrado con anterioridad
+                        // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
 
-                            // Lo marcamos como objeto a borrar
-                            deletes[j] = 1;
-                        }
+                        //cout << "Collision objects " << i << " and " << j << endl;
+                        //cout << "Obj: " << i << " posx: " << objects[i].pos_x << " posy: " << objects[i].pos_y << " posz: " << objects[i].pos_z << " speedx: " << objects[i].speed_x << " speedy: " << objects[i].speed_y << " speedz: " << objects[i].speed_z << " mass " << objects[i].mass << "\n";
+                        //cout << "Obj: " << j << " posx: " << objects[j].pos_x << " posy: " << objects[j].pos_y << " posz: " << objects[j].pos_z << " speedx: " << objects[j].speed_x << " speedy: " << objects[j].speed_y << " speedz: " << objects[j].speed_z << " mass " << objects[j].mass << "\n";
+
+                        //cout << "Body " << j << " removed" << endl;
+
+                        objects[i].mass += objects[j].mass;
+                        objects[i].speed_x += objects[j].speed_x;
+                        objects[i].speed_y += objects[j].speed_y;
+                        objects[i].speed_z += objects[j].speed_z;
+
+                        //cout << "Object " << i << " after collapse" << endl;
+                        //cout << "Obj: " << i << " posx: " << objects[i].pos_x << " posy: " << objects[i].pos_y << " posz: " << objects[i].pos_z << " speedx: " << objects[i].speed_x << " speedy: " << objects[i].speed_y << " speedz: " << objects[i].speed_z << " mass " << objects[i].mass << "\n";
+                        // Lo marcamos como objeto a borrar
+                        objects.erase(objects.begin() + j);
+                        j--;
                     }
                 }
             }
         }
 
-        /*
-        int contador = 0;
-        while (contador < num_objects)
-        {
-            if (deletes[contador] == 1)
-            {
-                objects.erase(objects.begin() + contador);
-                num_objects -= 1;
-            }
-            contador++;
-        }
-        */
-
-        // Borramos los objetos marcados del vector de objetos
-        for (int i = 0; i < num_objects; i++){
-            if (deletes[i] == 1){
-                objects.erase(objects.begin()+i);
-                num_objects -= 1;
-            }
-        }
-
+        num_objects = objects.size();
         cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
-
-        
     }
 
     /* Escribimos en el archivo "final_config.txt" los parámetros finales */
