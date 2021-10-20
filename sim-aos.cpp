@@ -14,8 +14,8 @@ using namespace std;
 
 /* CONSTANTES */
 const double GRAVITY_CONST = 6.674 * 1E-11; // Constante gravedad universal
-const double M = 1e+21;                     // Media (distribución normal)
-const double SDM = 1e+15;                   // Desviación (distribución normal)
+const double M = 1E21;                     // Media (distribución normal)
+const double SDM = 1E15;                   // Desviación (distribución normal)
 
 /* ESTRUCTURAS */
 /* Estructura objeto */
@@ -51,14 +51,14 @@ bool check_collision(object object_1, object object_2);
 int main(int argc, char const *argv[])
 {
 
-    /* Comprobación inicial variables */
+    /* Comprobación número inicial argumentos */
     if (argc != 6)
     {
         cerr << "Número de argumentos incorrecto\n";
         return -1;
     }
 
-    /* Comprobación de valores iniciales de variables */
+    /* Comprobación de valores iniciales de argumentos */
     if ((atoi(argv[1]) <= 0 || atoi(argv[2]) <= 0 || atoi(argv[3]) <= 0 || atof(argv[4]) <= 0.0 || atof(argv[5]) <= 0.0) ||
         (atof(argv[1]) != atoi(argv[1]) || atof(argv[2]) != atoi(argv[2]) || atof(argv[3]) != atoi(argv[3])))
     {
@@ -80,10 +80,10 @@ int main(int argc, char const *argv[])
     cout << "size_enclosure: " << size_enclosure << "\n";
     cout << "time_step: " << time_step << "\n";
 
-    /* Coordenadas aleatorias */
+    /* Coordenadas y masas aleatorias */
     mt19937_64 gen(random_seed);
     uniform_real_distribution<> position_dist(0.0, size_enclosure);
-    normal_distribution<> mass_dist{1E21, 1E15};
+    normal_distribution<> mass_dist{M, SDM};
 
     /* AOS - Array of Structs */
     // object *objects = (object*) malloc(sizeof(object)*num_objects);
@@ -138,6 +138,7 @@ int main(int argc, char const *argv[])
             }
         }
 
+        /* Bucle para calcular posiciones y comprobar bordes */
         for (int i = 0; i < num_objects; i++)
         {
             // Cálculo del vector posiciones
@@ -148,33 +149,36 @@ int main(int argc, char const *argv[])
             // cout<< "Obj: " << i<<" posx: "<<objects[i].pos_x<<" posy: "<< objects[i].pos_y<<" posz: "<<objects[i].pos_z<<" speedx: "<<objects[i].speed_x<<" speedy: "<< objects[i].speed_y<<" speedz: "<<objects[i].speed_z<<"\n";
         }
         // cout<<"Nuevas posiciones calculadas \n";
-        int deletes[num_objects];
-        int num_objects_after_delete = num_objects;
+
+        int *deletes = (int*)malloc(sizeof(int)*num_objects); // Array que identifica objetos a borrar
+
         /* Bucle anidado para comprobar colisiones entre objetos */
         for (int i = 0; i < num_objects; i++)
         {
             for (int j = i + 1; j < num_objects; j++)
             { // TODO AÑADIR OPTI num_objetos -i-1 objects[j+i+1]
-                // Se resta i y 1 para evitar comprobaciones dobles
                 // Comprobar colisiones
                 if (i != j)
                 { // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                     if (check_collision(objects[i], objects[j]))
                     { // Comprobar colisión
                         if (deletes[j] != 1 && deletes[i] != 1)
-                        {
+                        { // No deben haberse borrado con anterioridad
                             // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                             objects[i].mass += objects[j].mass;
                             objects[i].speed_x += objects[j].speed_x;
                             objects[i].speed_y += objects[j].speed_y;
                             objects[i].speed_z += objects[j].speed_z;
 
+                            // Lo marcamos como objeto a borrar
                             deletes[j] = 1;
                         }
                     }
                 }
             }
         }
+
+        /*
         int contador = 0;
         while (contador < num_objects)
         {
@@ -185,41 +189,22 @@ int main(int argc, char const *argv[])
             }
             contador++;
         }
+        */
+
+        // Borramos los objetos marcados del vector de objetos
+        for (int i = 0; i < num_objects; i++){
+            if (deletes[i] == 1){
+                objects.erase(objects.begin()+i);
+                num_objects -= 1;
+            }
+        }
 
         cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
 
-        // Eliminación del segundo objeto que colisiona del sistema
-
-        /*
-        // Actualizar array objects debido a colisiones
-
-        int counter = 0; // Contador que recorrerá los objetos de nuestro array hasta borrar los colisionados
-        while (counter<num_objects_after_delete){
-            if (objects[counter].mass==0.0){ // Si el objeto tiene masa=0.0 -> ha sido eliminado y hay que actualizar el array
-                for (int i = 0; i<num_objects-counter-1; i++){
-                    objects[i+counter]=objects[i+counter+1]; // Mueve el resto de objetos para sustituir el eliminado
-                    // num_objects = 4; counter = 0 i<3
-                    // i=0 objects[0]=objects[1]
-                    // i=1 objects[1]=objects[2]
-                    // i=2 objects[2]=objects[3]
-
-                    // num_objects = 4; counter = 1 i<2
-                    // i=0 objects[1]=objects[2]
-                    // i=1 objects[2]=objects[3]
-
-                    // num_objects = 4; counter = 2 i<1
-                    // i=0 objects[2]=objects[3]
-
-                    // num_objects = 4; counter = 3 i<0
-                }
-
-            }else{ // Si el objeto tiene masa!=0.0 -> no hay que actualizar el array
-                counter++; // Aumentamos el contador
-            }
-        }
-        num_objects = num_objects_after_delete;
-        */
+        
     }
+
+    /* Escribimos en el archivo "final_config.txt" los parámetros finales */
     ofstream file_final;
     file_final.open("final_config.txt");
     file_final << fixed << setprecision(3) << size_enclosure << " " << time_step << " " << num_objects << endl;
@@ -248,7 +233,6 @@ void vector_gravitational_force(object object_1, object object_2, double *forces
     double x = (euclidean_norm(object_1, object_2));
     if (x != 0)
     {
-        double ttt = (GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_x - object_2.pos_x)) / (x * x * x);
         //cout << "Vector x de la fuerza: " << ttt << endl;
         //cout << "Euclidean: " << x << endl;
         forces[0] += (GRAVITY_CONST * object_1.mass * object_2.mass * (object_1.pos_x - object_2.pos_x)) / (x * x * x);
