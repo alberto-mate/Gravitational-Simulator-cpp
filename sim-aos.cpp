@@ -145,6 +145,9 @@ int main(int argc, char const *argv[])
         }
     }
 
+    // Actualizamos el número de objetos en el vector
+    num_objects = objects.size();
+
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++)
     {
