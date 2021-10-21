@@ -69,7 +69,7 @@ int main(int argc, char const *argv[]) {
     /* Coordenadas y masas pseudoaleatorias */
     mt19937_64 gen(random_seed);
     uniform_real_distribution<> position_dist(0.0, size_enclosure);
-    normal_distribution<> mass_dist(M, SDM);
+    normal_distribution<> mass_dist{M, SDM};
 
     /* AOS - Array of Structs */
     vector<object> objects(num_objects);
