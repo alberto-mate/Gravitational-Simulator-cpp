@@ -119,7 +119,7 @@ int main(int argc, char const *argv[]) {
             // Cálculo de la fuerza gravitatoria
             double forces[3] = {0.0, 0.0, 0.0};
             calc_gravitational(num_objects, i, objects, forces);
-            cout << "Forces " << i << " ax: " << forces[0] << " ay: " << forces[1] << " az: " << forces[2] << "\n";
+            // cout << "Forces " << i << " ax: " << forces[0] << " ay: " << forces[1] << " az: " << forces[2] << "\n";
             // Cálculo del vector aceleración
             vector_elem *acceleration = (vector_elem *)malloc(sizeof(vector_elem));
             vector_acceleration(objects[i], forces, acceleration);
@@ -156,7 +156,7 @@ int main(int argc, char const *argv[]) {
 
         // Actualizamos el número de objetos en el vector
         num_objects = objects.size();
-        cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
+        //cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
     }
 
     /* Escribimos en el archivo "final_config.txt" los parámetros finales */
@@ -174,13 +174,12 @@ int main(int argc, char const *argv[]) {
 /* FUNCIONES */
 /* Distancia euclídea entre dos objetos */
 double euclidean_norm(object object_1, object object_2) {
-    return std::sqrt((object_1.pos_x - object_2.pos_x) * (object_1.pos_x - object_2.pos_x) + (object_1.pos_y - object_2.pos_y) * (object_1.pos_y - object_2.pos_y) + (object_1.pos_z - object_2.pos_z) * (object_1.pos_z - object_2.pos_z));
+    return std::sqrt(pow((object_1.pos_x - object_2.pos_x), 2) + pow((object_1.pos_y - object_2.pos_y), 2) + pow((object_1.pos_z - object_2.pos_z), 2));
 }
 
 /* Fuerza gravitatoria entre dos objetos */
 void vector_gravitational_force(object object_1, object object_2, double *forces) {
-    double x = euclidean_norm(object_1, object_2);
-    double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ (x*x*x);
+    double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ pow((euclidean_norm(object_1, object_2)) ,3);
     forces[0] += (Fg * (object_1.pos_x - object_2.pos_x));
     forces[1] += (Fg * (object_1.pos_y - object_2.pos_y));
     forces[2] += (Fg * (object_1.pos_z - object_2.pos_z));
@@ -197,7 +196,6 @@ void calc_gravitational(int num_objects, int i, std::vector<object> &objects, do
 
 /* Vector aceleración */
 void vector_acceleration(object object_1, double *forces, vector_elem *acceleration) {
-    /* Cálculo del vector velocidad */
     acceleration->x = forces[0] / object_1.mass;
     acceleration->y = forces[1] / object_1.mass;
     acceleration->z = forces[2] / object_1.mass;
