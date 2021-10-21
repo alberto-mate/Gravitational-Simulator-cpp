@@ -1,14 +1,10 @@
 /* Librerias */
+/* Librerias */
 #include <iostream>
 #include <math.h>
-#include <string>
 #include <fstream>
 #include <random>
-#include <chrono>
-#include <iomanip>
 #include <vector>
-#include <stdio.h>
-#include <stdlib.h>
 
 using namespace std;
 
