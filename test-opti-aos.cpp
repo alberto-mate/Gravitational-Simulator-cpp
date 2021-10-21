@@ -174,12 +174,13 @@ int main(int argc, char const *argv[]) {
 /* FUNCIONES */
 /* Distancia euclídea entre dos objetos */
 double euclidean_norm(object object_1, object object_2) {
-    return std::sqrt(pow((object_1.pos_x - object_2.pos_x), 2) + pow((object_1.pos_y - object_2.pos_y), 2) + pow((object_1.pos_z - object_2.pos_z), 2));
+    return std::sqrt((object_1.pos_x - object_2.pos_x) * (object_1.pos_x - object_2.pos_x) + (object_1.pos_y - object_2.pos_y) * (object_1.pos_y - object_2.pos_y) + (object_1.pos_z - object_2.pos_z) * (object_1.pos_z - object_2.pos_z));
 }
 
 /* Fuerza gravitatoria entre dos objetos */
 void vector_gravitational_force(object object_1, object object_2, double *forces) {
-    double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ pow((euclidean_norm(object_1, object_2)) ,3);
+    double x = euclidean_norm(object_1, object_2)
+    double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ (x*x*x);
     forces[0] += (Fg * (object_1.pos_x - object_2.pos_x));
     forces[1] += (Fg * (object_1.pos_y - object_2.pos_y));
     forces[2] += (Fg * (object_1.pos_z - object_2.pos_z));
