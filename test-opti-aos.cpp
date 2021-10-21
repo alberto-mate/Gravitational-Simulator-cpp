@@ -197,6 +197,7 @@ void calc_gravitational(int num_objects, int i, std::vector<object> &objects, do
 
 /* Vector aceleración */
 void vector_acceleration(object object_1, double *forces, vector_elem *acceleration) {
+    /* Cálculo del vector velocidad */
     acceleration->x = forces[0] / object_1.mass;
     acceleration->y = forces[1] / object_1.mass;
     acceleration->z = forces[2] / object_1.mass;
