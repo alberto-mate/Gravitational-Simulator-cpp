@@ -6,3 +6,5 @@ add_compile_options(-Wall -Wextra -Wno-deprecated -pedantic -pedantic-errors -DC
 
 add_executable(sim-aos sim-aos.cpp)
 add_executable(sim-soa sim-soa.cpp)
+add_executable(sim-aos-opti sim-aos-opti.cpp)
+add_executable(sim-soa-opti sim-soa-opti.cpp)

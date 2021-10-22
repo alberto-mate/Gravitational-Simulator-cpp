@@ -4,6 +4,7 @@
 #include <fstream>
 #include <random>
 #include <vector>
+#include <iomanip>
 
 using namespace std;
 
@@ -174,7 +175,7 @@ double euclidean_norm(object object_1, object object_2) {
 
 /* Fuerza gravitatoria entre dos objetos */
 void vector_gravitational_force(object object_1, object object_2, double *forces) {
-    double dist = euclidean_norm(object_1, object_2)
+    double dist = euclidean_norm(object_1, object_2);
     double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ (dist*dist*dist);
     forces[0] += (Fg * (object_1.pos_x - object_2.pos_x));
     forces[1] += (Fg * (object_1.pos_y - object_2.pos_y));
