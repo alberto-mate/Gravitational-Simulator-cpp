@@ -45,6 +45,10 @@ bool check_collision(object object_1, object object_2);
 
 /* MAIN */
 int main(int argc, char const *argv[]) {
+        double start;
+    double end;
+    start = omp_get_wtime();
+
     /* Comprobación número inicial argumentos */
     if (argc != 6){
         cerr << "Número de argumentos incorrecto\n";
@@ -168,7 +172,8 @@ int main(int argc, char const *argv[]) {
     }
 
     file_init.close(); // Cerramos el fichero "final_config.txt"
-
+    end = omp_get_wtime();
+    cout<<"Time: "<<end-start<<"\n";
 }
 
 /* FUNCIONES */
