@@ -10,6 +10,7 @@
 
 using namespace std;
 
+
 /* CONSTANTES */
 const double GRAVITY_CONST = 6.674 * 1E-11; // Constante gravedad universal
 const double M = 1E21;                      // Media (distribución normal)
@@ -45,7 +46,10 @@ bool check_collision(object object_1, object object_2);
 
 /* MAIN */
 int main(int argc, char const *argv[]) {
-        double start;
+    omp_set_dynamic(0);
+    omp_set_num_threads(16);
+
+    double start;
     double end;
     start = omp_get_wtime();
 
@@ -219,10 +223,23 @@ void calc_gravitational(int num_objects, int i, std::vector<object> &objects, do
 
 /* Vector aceleración */
 void vector_acceleration(object object_1, double *forces, vector_elem *acceleration) {
+    /*
+    #pragma omp parallel
+    {
+        #pragma omp sections
+        {
+            #pragma omp section
+                acceleration->x = forces[0] / object_1.mass;
+            #pragma omp section
+                acceleration->y = forces[1] / object_1.mass;
+            #pragma omp section
+                acceleration->z = forces[2] / object_1.mass;
+        }
+    }
+    */
     acceleration->x = forces[0] / object_1.mass;
     acceleration->y = forces[1] / object_1.mass;
     acceleration->z = forces[2] / object_1.mass;
-
 }
 
 /* Vector velocidad */
