@@ -45,10 +45,13 @@ void check_border(object *object_1, double size_enclosure);
 bool check_collision(object object_1, object object_2);
 
 /* MAIN */
-int main(int argc, char const *argv[]) {
+int main(int argc, char const *argv[]) 
+{
+    // Para declarar el numero de threads que se usaran
     omp_set_dynamic(0);
     omp_set_num_threads(16);
 
+    // Para calcular el tiempo de ejecucción
     double start;
     double end;
     start = omp_get_wtime();
@@ -121,11 +124,9 @@ int main(int argc, char const *argv[]) {
     for (int iteration = 0; iteration < num_iterations; iteration++) {
         /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
         for (int i = 0; i < num_objects; i++) {
-            // Solo entrarán en el condicional objetos que no se han eliminado
             // Cálculo de la fuerza gravitatoria
             double forces[3] = {0.0, 0.0, 0.0};
             calc_gravitational(num_objects, i, objects, forces);
-            //cout << "Forces " << i << " ax: " << forces[0] << " ay: " << forces[1] << " az: " << forces[2] << "\n";
             // Cálculo del vector aceleración
             vector_elem *acceleration = (vector_elem *)malloc(sizeof(vector_elem));
             vector_acceleration(objects[i], forces, acceleration);
@@ -163,7 +164,6 @@ int main(int argc, char const *argv[]) {
 
         // Actualizamos el número de objetos en el vector
         num_objects = objects.size();
-        //cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
     }
 
     /* Escribimos en el archivo "final_config.txt" los parámetros finales */
@@ -191,7 +191,11 @@ void vector_gravitational_force(object object_1, object object_2, double *forces
 
     double dist = euclidean_norm(object_1, object_2);
     double Fg = GRAVITY_CONST * object_1.mass * object_2.mass/ (dist*dist*dist);
+    forces[0] += (Fg * (object_1.pos_x - object_2.pos_x));
+    forces[1] += (Fg * (object_1.pos_y - object_2.pos_y));
+    forces[2] += (Fg * (object_1.pos_z - object_2.pos_z));
     /*
+    // Version que usa sections
     #pragma omp parallel
     {
         #pragma omp sections
@@ -205,9 +209,6 @@ void vector_gravitational_force(object object_1, object object_2, double *forces
         }
     }
     */
-    forces[0] += (Fg * (object_1.pos_x - object_2.pos_x));
-    forces[1] += (Fg * (object_1.pos_y - object_2.pos_y));
-    forces[2] += (Fg * (object_1.pos_z - object_2.pos_z));
 
 
 }
@@ -223,7 +224,12 @@ void calc_gravitational(int num_objects, int i, std::vector<object> &objects, do
 
 /* Vector aceleración */
 void vector_acceleration(object object_1, double *forces, vector_elem *acceleration) {
+    /* Cálculo del vector aceleracion */
+    acceleration->x = forces[0] / object_1.mass;
+    acceleration->y = forces[1] / object_1.mass;
+    acceleration->z = forces[2] / object_1.mass;
     /*
+    // Version que usa sections
     #pragma omp parallel
     {
         #pragma omp sections
@@ -237,9 +243,6 @@ void vector_acceleration(object object_1, double *forces, vector_elem *accelerat
         }
     }
     */
-    acceleration->x = forces[0] / object_1.mass;
-    acceleration->y = forces[1] / object_1.mass;
-    acceleration->z = forces[2] / object_1.mass;
 }
 
 /* Vector velocidad */
@@ -260,40 +263,6 @@ void vector_position(object *object_1, double time_step) {
 
 /* Función para recolocar al objeto si traspasa los límites */
 void check_border(object *object_1, double size_enclosure) {
-    /*#pragma omp parallel
-    {
-        #pragma omp sections
-        {
-            #pragma omp section
-                // Checks posición x
-                if (object_1->pos_x <= 0) { 
-                    object_1->pos_x = 0;
-                    object_1->speed_x = -1 * (object_1->speed_x);
-                } else if (object_1->pos_x >= size_enclosure) {
-                    object_1->pos_x = size_enclosure;
-                    object_1->speed_x = -1 * (object_1->speed_x);
-                }
-            #pragma omp section
-                // Checks posición y
-                if (object_1->pos_y <= 0) {
-                    object_1->pos_y = 0;
-                    object_1->speed_y = -1 * (object_1->speed_y);
-                } else if (object_1->pos_y >= size_enclosure) {
-                    object_1->pos_y = size_enclosure;
-                    object_1->speed_y = -1 * (object_1->speed_y);
-                }
-            #pragma omp section
-                // Checks posición z
-                if (object_1->pos_z <= 0) {
-                    object_1->pos_z = 0;
-                    object_1->speed_z = -1 * (object_1->speed_z);
-                } else if (object_1->pos_z >= size_enclosure) {
-                    object_1->pos_z = size_enclosure;
-                    object_1->speed_z = -1 * (object_1->speed_z);
-                }
-        }
-    }
-    */
     // Checks posición x
     if (object_1->pos_x <= 0) { 
         object_1->pos_x = 0;
@@ -318,9 +287,6 @@ void check_border(object *object_1, double size_enclosure) {
         object_1->pos_z = size_enclosure;
         object_1->speed_z = -1 * (object_1->speed_z);
     }
-
-
-
 }
 
 /* Comprobar colisión entre dos objetos (distancia euclídea entre objetos menor que 1) */

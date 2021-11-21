@@ -47,6 +47,7 @@ bool check_collision(object objects, int i, int j);
 /* MAIN */
 int main(int argc, char const *argv[])
 {   
+    // Para calcular el tiempo de ejecucción
     double start;
     double end;
     start = omp_get_wtime();
@@ -127,6 +128,7 @@ int main(int argc, char const *argv[])
                     objects.speed_y[i] += objects.speed_y[j];
                     objects.speed_z[i] += objects.speed_z[j];
                     
+                    // Se "elimina" el objeto
                     objects.active[j]=false;
                 }
             }
@@ -138,7 +140,7 @@ int main(int argc, char const *argv[])
     {
         struct vector_elem *acceleration = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
         struct vector_elem *forces = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
-        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
@@ -147,34 +149,40 @@ int main(int argc, char const *argv[])
                 calc_gravitational(num_objects, i, objects, &forces[i]);
             }
         }
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (acceleracion)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 // Cálculo del vector aceleración
                 vector_acceleration(objects, i, &forces[i], &acceleration[i]);
             }
         }
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (velocidad)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 //  Cálculo del vector velocidad
                 vector_speed(&objects, i, &acceleration[i], time_step);
             }
         }
 
-        /* Bucle para calcular posiciones y comprobar bordes */        
+        /* Bucle para calcular posiciones*/        
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 // Cálculo del vector posiciones
                 vector_position(&objects, i, time_step);
             }
         }
 
-        /* Bucle para calcular posiciones y comprobar bordes */        
+        /* Bucle para comprobar bordes */        
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 //  Comprobar bordes
                 check_border(&objects, i, size_enclosure);
             }
@@ -197,6 +205,7 @@ int main(int argc, char const *argv[])
                         objects.speed_y[i] += objects.speed_y[j];
                         objects.speed_z[i] += objects.speed_z[j];
                         
+                        // Se "elimina" el objeto
                         objects.active[j]=false;
                     }
                 }

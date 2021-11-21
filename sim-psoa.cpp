@@ -47,9 +47,11 @@ bool check_collision(object objects, int i, int j);
 /* MAIN */
 int main(int argc, char const *argv[])
 {
+    // Para declarar el numero de threads que se usaran
     omp_set_dynamic(0);
     omp_set_num_threads(16);
 
+    // Para calcular el tiempo de ejecucción
     double start;
     double end;
     start = omp_get_wtime();
@@ -131,6 +133,7 @@ int main(int argc, char const *argv[])
                     objects.speed_y[i] += objects.speed_y[j];
                     objects.speed_z[i] += objects.speed_z[j];
                     
+                    // Se "elimina" el objeto
                     objects.active[j]=false;
                 }
             }
@@ -142,8 +145,7 @@ int main(int argc, char const *argv[])
     {
         struct vector_elem *acceleration = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
         struct vector_elem *forces = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
-        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
-        //#pragma omp parallel for
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
@@ -152,38 +154,40 @@ int main(int argc, char const *argv[])
                 calc_gravitational(num_objects, i, objects, &forces[i]);
             }
         }
-        //#pragma omp parallel for
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (aceleracion)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 // Cálculo del vector aceleración
                 vector_acceleration(objects, i, &forces[i], &acceleration[i]);
             }
         }
-        //#pragma omp parallel for
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (velocidad)*/
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 //  Cálculo del vector velocidad
                 vector_speed(&objects, i, &acceleration[i], time_step);
             }
         }
 
-        /* Bucle para calcular posiciones y comprobar bordes */        
-        //#pragma omp parallel for
+        /* Bucle para calcular posiciones*/        
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 // Cálculo del vector posiciones
                 vector_position(&objects, i, time_step);
             }
         }
 
-        /* Bucle para calcular posiciones y comprobar bordes */        
-        //#pragma omp parallel for
+        /* Bucle para comprobar bordes */        
         for (int i = 0; i < num_objects; i++)
         {
             if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
                 //  Comprobar bordes
                 check_border(&objects, i, size_enclosure);
             }
@@ -207,6 +211,7 @@ int main(int argc, char const *argv[])
                         objects.speed_y[i] += objects.speed_y[j];
                         objects.speed_z[i] += objects.speed_z[j];
                         
+                        // Se "elimina" el objeto
                         objects.active[j]=false;
                     }
                 }
@@ -269,7 +274,12 @@ void vector_acceleration(object objects, int i, vector_elem *forces, vector_elem
 void vector_speed(object *objects, int i, vector_elem *acceleration, double time_step)
 {
     /* Cálculo del vector velocidad */
-    /*
+    objects->speed_x[i] += (acceleration->x * time_step);
+    objects->speed_z[i] += (acceleration->z * time_step);
+    objects->speed_y[i] += (acceleration->y * time_step);
+    
+    /* 
+    //Version que usa sections
     #pragma omp parallel
     {
         #pragma omp sections
@@ -285,16 +295,18 @@ void vector_speed(object *objects, int i, vector_elem *acceleration, double time
         }
     }
     */
-    /* Cálculo del vector velocidad */
-    objects->speed_x[i] += (acceleration->x * time_step);
-    objects->speed_z[i] += (acceleration->z * time_step);
-    objects->speed_y[i] += (acceleration->y * time_step);
+
 }
 
 /* Vector de posicion */
 void vector_position(object *objects, int i, double time_step)
 {
-    /* 
+    /* Cálculo del vector posición */
+    objects->pos_x[i] += (objects->speed_x[i] * time_step);
+    objects->pos_y[i] += (objects->speed_y[i] * time_step);
+    objects->pos_z[i] += (objects->speed_z[i] * time_step);
+    /*
+    // Version que usa sections 
     #pragma omp parallel
     {
         #pragma omp sections
@@ -310,62 +322,11 @@ void vector_position(object *objects, int i, double time_step)
         }
     }
     */
-    /* Cálculo del vector posición */
-    objects->pos_x[i] += (objects->speed_x[i] * time_step);
-    objects->pos_y[i] += (objects->speed_y[i] * time_step);
-    objects->pos_z[i] += (objects->speed_z[i] * time_step);
-
 }
 
 /* Función para recolocar al objeto si traspasa los límites */
 void check_border(object *objects, int i, double size_enclosure)
 {
-    /*
-    #pragma omp parallel
-    {
-        #pragma omp sections
-        {
-            #pragma omp section
-            // Checks posición x
-            if (objects->pos_x[i] <= 0)
-            {
-                objects->pos_x[i] = 0;
-                objects->speed_x[i] = -1 * (objects->speed_x[i]);
-            }
-            else if (objects->pos_x[i] >= size_enclosure)
-            {
-                objects->pos_x[i] = size_enclosure;
-                objects->speed_x[i] = -1 * (objects->speed_x[i]);
-            }
-
-            #pragma omp section
-            // Checks posición y
-            if (objects->pos_y[i] <= 0)
-            {
-                objects->pos_y[i] = 0;
-                objects->speed_y[i] = -1 * (objects->speed_y[i]);
-            }
-            else if (objects->pos_y[i] >= size_enclosure)
-            {
-                objects->pos_y[i] = size_enclosure;
-                objects->speed_y[i] = -1 * (objects->speed_y[i]);
-            }
-
-            #pragma omp section
-            // Checks posición z
-            if (objects->pos_z[i] <= 0)
-            {
-                objects->pos_z[i] = 0;
-                objects->speed_z[i] = -1 * (objects->speed_z[i]);
-            }
-            else if (objects->pos_z[i] >= size_enclosure)
-            {
-                objects->pos_z[i] = size_enclosure;
-                objects->speed_z[i] = -1 * (objects->speed_z[i]);
-            }
-        }
-    }
-    */
     // Checks posición x
     if (objects->pos_x[i] <= 0)
     {
