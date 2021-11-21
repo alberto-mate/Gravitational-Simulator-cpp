@@ -17,13 +17,14 @@ const double SDM = 1E15;                    // Desviación (distribución normal
 /* ESTRUCTURAS */
 /* Estructura objeto */
 struct object {
-    vector<double> pos_x;
-    vector<double> pos_y;
-    vector<double> pos_z;
-    vector<double> speed_x;
-    vector<double> speed_y;
-    vector<double> speed_z;
-    vector<double> mass;
+    double *pos_x;
+    double *pos_y;
+    double *pos_z;
+    double *speed_x;
+    double *speed_y;
+    double *speed_z;
+    double *mass;
+    bool *active;
 };
 
 /* Estructura vector_elem */
@@ -35,9 +36,9 @@ struct vector_elem{
 
 /* DECLARACIÓN PREVIA DE FUNCIONES */
 double euclidean_norm(object objects, int index_1, int index_2);
-void vector_gravitational_force(object objects, int index_1, int index_2, double* forces);
-void calc_gravitational(int num_objects, int k, object objects, double* forces);
-void vector_acceleration(object objects, int i, double* forces, vector_elem* acceleration);
+void vector_gravitational_force(object objects, int index_1, int index_2, vector_elem* forces);
+void calc_gravitational(int num_objects, int k, object objects, vector_elem* forces);
+void vector_acceleration(object objects, int i, vector_elem* forces, vector_elem* acceleration);
 void vector_speed(object *objects, int i, vector_elem *acceleration, double time_step);
 void vector_position(object *objects, int i, double time_step);
 void check_border(object *objects, int i, double size_enclosure);
@@ -46,6 +47,9 @@ bool check_collision(object objects, int i, int j);
 /* MAIN */
 int main(int argc, char const *argv[])
 {
+    omp_set_dynamic(0);
+    omp_set_num_threads(16);
+
     double start;
     double end;
     start = omp_get_wtime();
@@ -73,13 +77,14 @@ int main(int argc, char const *argv[])
 
     /* SOA - Structure of Arrays */
     object objects; 
-    objects.mass.resize(num_objects);
-    objects.pos_x.resize(num_objects);
-    objects.pos_y.resize(num_objects);
-    objects.pos_z.resize(num_objects);
-    objects.speed_x.resize(num_objects);
-    objects.speed_y.resize(num_objects);
-    objects.speed_z.resize(num_objects);
+    objects.mass = (double*)malloc(sizeof(double)*num_objects);
+    objects.pos_x  = (double*)malloc(sizeof(double)*num_objects);
+    objects.pos_y  = (double*)malloc(sizeof(double)*num_objects);
+    objects.pos_z  = (double*)malloc(sizeof(double)*num_objects);
+    objects.speed_x  = (double*)malloc(sizeof(double)*num_objects);
+    objects.speed_y = (double*)malloc(sizeof(double)*num_objects);
+    objects.speed_z = (double*)malloc(sizeof(double)*num_objects);
+    objects.active = (bool*)malloc(sizeof(bool)*num_objects);
 
     /* Coordenadas y masas pseudoaleatorias */
     mt19937_64 gen(random_seed);
@@ -98,6 +103,7 @@ int main(int argc, char const *argv[])
         objects.pos_y[i] = position_dist(gen);
         objects.pos_z[i] = position_dist(gen);
         objects.mass[i] = mass_dist(gen); // Masa
+        objects.active[i] = true; // Active
 
         // Ponemos la precisión a 3 decimales. Imprimimos el objeto
         file_init << fixed << setprecision(3) << objects.pos_x[i] << " " << objects.pos_y[i] << " " << objects.pos_z[i] << " " << objects.speed_x[i] << " " << objects.speed_y[i] << " " << objects.speed_z[i] << " " << objects.mass[i] << endl;
@@ -107,95 +113,105 @@ int main(int argc, char const *argv[])
 
 
     /* Bucle anidado para comprobar colisiones entre objetos previas a las iteraciones */
-    for (long unsigned int i = 0; i < objects.mass.size(); i++)
+    #pragma omp parallel for
+    for (int i = 0; i < num_objects; i++)
     {
-        for (long unsigned int j = i + 1; j < objects.mass.size(); j++)
+        for (int j = i + 1; j < num_objects; j++)
         {
             // Comprobar colisiones
+            if(objects.active[i]==true && objects.active[j]==true){
             // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
-            if (check_collision(objects, i, j))
-            {   // Comprobar colisión
-                // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
-                // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
-                objects.mass[i] += objects.mass[j];
-                objects.speed_x[i] += objects.speed_x[j];
-                objects.speed_y[i] += objects.speed_y[j];
-                objects.speed_z[i] += objects.speed_z[j];
-                
-                // Lo borramos de los vectores
-                objects.pos_x.erase(objects.pos_x.begin() + j);
-                objects.pos_y.erase(objects.pos_y.begin() + j);
-                objects.pos_z.erase(objects.pos_z.begin() + j);
-                objects.speed_x.erase(objects.speed_x.begin() + j);
-                objects.speed_y.erase(objects.speed_y.begin() + j);
-                objects.speed_z.erase(objects.speed_z.begin() + j);
-                objects.mass.erase(objects.mass.begin() + j);                    
-                j--;
-            }
-        }
-    }
-
-    // Actualizamos el número de objetos en el vector
-    num_objects = objects.mass.size();
-
-    /* Iteraciones */
-    for (int iteration = 0; iteration < num_iterations; iteration++)
-    {
-        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
-        for (int i = 0; i < num_objects; i++)
-        {
-            // Solo entrarán en el condicional objetos que no se han eliminado
-            // Cálculo de la fuerza gravitatoria
-            double forces[3] = {0.0, 0.0, 0.0};
-            calc_gravitational(num_objects, i, objects, forces);
-            // Cálculo del vector aceleración
-            vector_elem *acceleration = (vector_elem *)malloc(sizeof(vector_elem));
-            vector_acceleration(objects, i, forces, acceleration);
-            //  Cálculo del vector velocidad
-            vector_speed(&objects, i, acceleration, time_step);
-
-        }
-
-        /* Bucle para calcular posiciones y comprobar bordes */        
-        #pragma omp parallel for
-        for (int i = 0; i < num_objects; i++)
-        {
-            // Cálculo del vector posiciones
-            vector_position(&objects, i, time_step);
-            //  Comprobar bordes
-            check_border(&objects, i, size_enclosure);
-        }
-
-        /* Bucle anidado para comprobar colisiones entre objetos */
-        for (long unsigned int i = 0; i < objects.mass.size(); i++)
-        {
-            for (long unsigned int j = i + 1; j < objects.mass.size(); j++)
-            {
-                // Comprobar colisiones
-                // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
                 if (check_collision(objects, i, j))
-                {   // Comprobar colisión
+                {   
+                    // Comprobar colisión
+                    // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                     // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
                     objects.mass[i] += objects.mass[j];
                     objects.speed_x[i] += objects.speed_x[j];
                     objects.speed_y[i] += objects.speed_y[j];
                     objects.speed_z[i] += objects.speed_z[j];
-
-                    // Lo borramos de los vectores
-                    objects.pos_x.erase(objects.pos_x.begin() + j);
-                    objects.pos_y.erase(objects.pos_y.begin() + j);
-                    objects.pos_z.erase(objects.pos_z.begin() + j);
-                    objects.speed_x.erase(objects.speed_x.begin() + j);
-                    objects.speed_y.erase(objects.speed_y.begin() + j);
-                    objects.speed_z.erase(objects.speed_z.begin() + j);
-                    objects.mass.erase(objects.mass.begin() + j);                    
-                    j--;
+                    
+                    objects.active[j]=false;
                 }
             }
         }
+    }
 
-        // Actualizamos el número de objetos en el vector
-        num_objects = objects.mass.size();
+    /* Iteraciones */
+    for (int iteration = 0; iteration < num_iterations; iteration++)
+    {
+        struct vector_elem *acceleration = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
+        struct vector_elem *forces = (vector_elem*)malloc(sizeof(vector_elem)*num_objects);
+        /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
+        //#pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            if(objects.active[i]==true){
+                // Solo entrarán en el condicional objetos que no se han eliminado
+                // Cálculo de la fuerza gravitatoria
+                calc_gravitational(num_objects, i, objects, &forces[i]);
+            }
+        }
+        //#pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            if(objects.active[i]==true){
+                // Cálculo del vector aceleración
+                vector_acceleration(objects, i, &forces[i], &acceleration[i]);
+            }
+        }
+        //#pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            if(objects.active[i]==true){
+                //  Cálculo del vector velocidad
+                vector_speed(&objects, i, &acceleration[i], time_step);
+            }
+        }
+
+        /* Bucle para calcular posiciones y comprobar bordes */        
+        //#pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            if(objects.active[i]==true){
+                // Cálculo del vector posiciones
+                vector_position(&objects, i, time_step);
+            }
+        }
+
+        /* Bucle para calcular posiciones y comprobar bordes */        
+        //#pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            if(objects.active[i]==true){
+                //  Comprobar bordes
+                check_border(&objects, i, size_enclosure);
+            }
+        }
+        /* Bucle anidado para comprobar colisiones entre objetos previas a las iteraciones */
+        #pragma omp parallel for
+        for (int i = 0; i < num_objects; i++)
+        {
+            for (int j = i + 1; j < num_objects; j++)
+            {
+                // Comprobar colisiones
+                if(objects.active[i]==true && objects.active[j]==true){
+                // Colision entre objetos diferentes que no hayan sido eliminados con anterioridad
+                    if (check_collision(objects, i, j))
+                    {   
+                        // Comprobar colisión
+                        // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
+                        // Actualización de la masa y velocidades del primer objeto que colisiona generando uno nuevo
+                        objects.mass[i] += objects.mass[j];
+                        objects.speed_x[i] += objects.speed_x[j];
+                        objects.speed_y[i] += objects.speed_y[j];
+                        objects.speed_z[i] += objects.speed_z[j];
+                        
+                        objects.active[j]=false;
+                    }
+                }
+            }
+        }
     }
 
     /* Escribimos en el archivo "final_config.txt" los parámetros finales */
@@ -205,7 +221,9 @@ int main(int argc, char const *argv[])
 
     for (int i = 0; i < num_objects; i++)
     {
-        file_final << fixed << setprecision(3) << objects.pos_x[i] << " " << objects.pos_y[i] << " " << objects.pos_z[i] << " " << objects.speed_x[i] << " " << objects.speed_y[i] << " " << objects.speed_z[i] << " " << objects.mass[i] << endl;
+        if(objects.active[i]==true){
+            file_final << fixed << setprecision(3) << objects.pos_x[i] << " " << objects.pos_y[i] << " " << objects.pos_z[i] << " " << objects.speed_x[i] << " " << objects.speed_y[i] << " " << objects.speed_z[i] << " " << objects.mass[i] << endl;
+        }
     }
 
     file_init.close(); // Cerramos el fichero "final_config.txt"
@@ -220,48 +238,38 @@ double euclidean_norm(object objects, int i, int j)
 }
 
 /* Fuerza gravitatoria entre dos objetos */
-void vector_gravitational_force(object objects, int i, int j, double *forces)
+void vector_gravitational_force(object objects, int i, int j, vector_elem *forces)
 {
     double dist = euclidean_norm(objects, i, j);
     double Fg = GRAVITY_CONST * objects.mass[i] * objects.mass[j]/ (dist*dist*dist);
-    forces[0] += (Fg * (objects.pos_x[i] - objects.pos_x[j]));
-    forces[1] += (Fg * (objects.pos_y[i] - objects.pos_y[j]));
-    forces[2] += (Fg * (objects.pos_z[i] - objects.pos_z[j]));
+    forces->x += (Fg * (objects.pos_x[i] - objects.pos_x[j]));
+    forces->y += (Fg * (objects.pos_y[i] - objects.pos_y[j]));
+    forces->z += (Fg * (objects.pos_z[i] - objects.pos_z[j]));
 }
 
 /* Fuerza gravitatoria que ejerce un objeto */
-void calc_gravitational(int num_objects, int i, object objects, double *forces){
+void calc_gravitational(int num_objects, int i, object objects, vector_elem *forces){
     for (int j = 0; j < num_objects; j++){
-        if (j != i){
+        if (j != i && objects.active[j]==true){
             vector_gravitational_force(objects, j, i, forces);
         }
     }
 }
 
 /* Vector aceleración */
-void vector_acceleration(object objects, int i, double *forces, vector_elem *acceleration)
+void vector_acceleration(object objects, int i, vector_elem *forces, vector_elem *acceleration)
 {
     /* Cálculo del vector aceleración */
-    #pragma omp parallel
-    {
-        #pragma omp sections
-        {
-            #pragma omp section
-                acceleration->x = forces[0] / objects.mass[i];
-
-            #pragma omp section
-                acceleration->y = forces[1] / objects.mass[i];
-
-            #pragma omp section
-                acceleration->z = forces[2] / objects.mass[i];
-        }
-    }
+    acceleration->x = forces->x / objects.mass[i];
+    acceleration->y = forces->y/ objects.mass[i];
+    acceleration->z = forces->z / objects.mass[i];
 }
 
 /* Vector velocidad */
 void vector_speed(object *objects, int i, vector_elem *acceleration, double time_step)
 {
     /* Cálculo del vector velocidad */
+    /*
     #pragma omp parallel
     {
         #pragma omp sections
@@ -276,13 +284,17 @@ void vector_speed(object *objects, int i, vector_elem *acceleration, double time
                 objects->speed_y[i] += (acceleration->y * time_step);
         }
     }
-
+    */
+    /* Cálculo del vector velocidad */
+    objects->speed_x[i] += (acceleration->x * time_step);
+    objects->speed_z[i] += (acceleration->z * time_step);
+    objects->speed_y[i] += (acceleration->y * time_step);
 }
 
 /* Vector de posicion */
 void vector_position(object *objects, int i, double time_step)
 {
-    /* Cálculo del vector posición */
+    /* 
     #pragma omp parallel
     {
         #pragma omp sections
@@ -297,12 +309,18 @@ void vector_position(object *objects, int i, double time_step)
                 objects->pos_z[i] += (objects->speed_z[i] * time_step);
         }
     }
+    */
+    /* Cálculo del vector posición */
+    objects->pos_x[i] += (objects->speed_x[i] * time_step);
+    objects->pos_y[i] += (objects->speed_y[i] * time_step);
+    objects->pos_z[i] += (objects->speed_z[i] * time_step);
 
 }
 
 /* Función para recolocar al objeto si traspasa los límites */
 void check_border(object *objects, int i, double size_enclosure)
 {
+    /*
     #pragma omp parallel
     {
         #pragma omp sections
@@ -347,6 +365,42 @@ void check_border(object *objects, int i, double size_enclosure)
             }
         }
     }
+    */
+    // Checks posición x
+    if (objects->pos_x[i] <= 0)
+    {
+        objects->pos_x[i] = 0;
+        objects->speed_x[i] = -1 * (objects->speed_x[i]);
+    }
+    else if (objects->pos_x[i] >= size_enclosure)
+    {
+        objects->pos_x[i] = size_enclosure;
+        objects->speed_x[i] = -1 * (objects->speed_x[i]);
+    }
+
+    // Checks posición y
+    if (objects->pos_y[i] <= 0)
+    {
+        objects->pos_y[i] = 0;
+        objects->speed_y[i] = -1 * (objects->speed_y[i]);
+    }
+    else if (objects->pos_y[i] >= size_enclosure)
+    {
+        objects->pos_y[i] = size_enclosure;
+        objects->speed_y[i] = -1 * (objects->speed_y[i]);
+    }
+
+    // Checks posición z
+    if (objects->pos_z[i] <= 0)
+    {
+        objects->pos_z[i] = 0;
+        objects->speed_z[i] = -1 * (objects->speed_z[i]);
+    }
+    else if (objects->pos_z[i] >= size_enclosure)
+    {
+        objects->pos_z[i] = size_enclosure;
+        objects->speed_z[i] = -1 * (objects->speed_z[i]);
+    }      
 }
 
 /* Comprobar colisión entre dos objetos (distancia euclídea entre objetos menor que 1) */

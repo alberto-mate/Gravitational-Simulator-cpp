@@ -82,7 +82,7 @@ int main(int argc, char const *argv[]) {
 
     /* Fichero de configuracion inicial */
     ofstream file_init;
-    file_init.open("init_config_parallel.txt");
+    file_init.open("init_config.txt");
     file_init << fixed << setprecision(3) << size_enclosure << " " << time_step << " " << num_objects << endl;
 
     /* Creación de objetos */
@@ -168,7 +168,7 @@ int main(int argc, char const *argv[]) {
 
     /* Escribimos en el archivo "final_config.txt" los parámetros finales */
     ofstream file_final;
-    file_final.open("final_config_parallel.txt");
+    file_final.open("final_config.txt");
     file_final << fixed << setprecision(3) << size_enclosure << " " << time_step << " " << num_objects << endl;
 
     for (int i = 0; i < num_objects; i++) {
