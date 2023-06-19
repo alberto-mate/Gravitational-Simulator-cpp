@@ -1,4 +1,4 @@
-# Performance types of structures C++ analysis
+# 🪐 Gravitational Simulator in C++
 Analyze optimization in a C++ code using different types of structures. These structures are discussed below:
 1. `aos`: Array of Structures
 2. `soa`: Structure of Arrays
@@ -15,7 +15,7 @@ Furthermore, we also analyze the performace after parallelizing the code using `
 
 This project was made for the subject Computer Architecture of the Computer Engineering degree at the UC3M.
 
-## Files Oveview
+## 📁 Files Oveview
 * `sim-aos.cpp`: C++ code using `aos` structure.
 * `sim-soa.cpp`: C++ code using `soa` structure.
 * `sim-paos.cpp`: C++ code using `aos` structure and parallelized with `OpenMP`.
@@ -24,14 +24,14 @@ This project was made for the subject Computer Architecture of the Computer Engi
 * `sim-soa-opti.cpp`: C++ code using `soa` structure based on `sim-soa.cpp` but optimized.
 * `Makefile`: Makefile to compile the code.
 
-## How to compile
+## 🛠️ How to compile
 To compile the code, you just need to run the following command:
 ```
 make
 ```
 **Note:** You need to have `OpenCV` installed in your computer to compile `sim-aos-opti.cpp` files.
 
-## How to run
+## ▶️ How to run
 To run the code, you just need to run the following command:
 ```
 ./sim-<structure> <num_objects> <num_iterations> <random_seed> <size_enclosure> <time_step>
@@ -52,8 +52,8 @@ Example:
 The program will automatically generate a `init_config.txt` file with the initial configuration of the objects based on the random seed and a `final_config.txt` file with the final configuration of the objects.
 
 
-## Authors
-Alberto Maté Angulo
-Samuel Halstead Aldea
-Juan Franco Labarra
-Hugo García Cuesta
+## 👥 Authors
+* Alberto Maté Angulo
+* Samuel Halstead Aldea
+* Juan Franco Labarra
+* Hugo García Cuesta
