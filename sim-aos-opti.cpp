@@ -5,7 +5,7 @@
 #include <random>
 #include <vector>
 #include <iomanip>
-
+#include <opencv2/opencv.hpp>
 using namespace std;
 
 /* CONSTANTES */
@@ -23,6 +23,7 @@ struct object {
     double speed_y;
     double speed_z;
     double mass;
+    int id;
 };
 
 /* Estructura vector_elem */
@@ -46,6 +47,8 @@ int main(int argc, char const *argv[]) {
     /* Comprobación número inicial argumentos */
     if (argc != 6){
         cerr << "Número de argumentos incorrecto\n";
+        // Print argc
+        cerr << "Uso: ./sim-aos-opti <num_objects> <num_iterations> <random_seed> <size_enclosure> <time_step>\n";
         return -1;
     }
 
@@ -65,7 +68,17 @@ int main(int argc, char const *argv[]) {
     /* Coordenadas y masas pseudoaleatorias */
     mt19937_64 gen(random_seed);
     uniform_real_distribution<> position_dist(0.0, size_enclosure);
+    float scale_factor = size_enclosure/1000.0;
+    cout << "Scale factor: " << scale_factor << endl;
     normal_distribution<> mass_dist{M, SDM};
+
+    /* Definición de colores*/
+    std::unordered_map<int, cv::Scalar> color_map;
+    color_map[0] = cv::Scalar(0, 0, 255);    // Blue for point with ID 1
+    color_map[1] = cv::Scalar(0, 255, 0);    // Green for point with ID 2
+    color_map[2] = cv::Scalar(255, 0, 0);    // Red for point with ID 3
+    color_map[3] = cv::Scalar(0, 128, 255);  // Yellow for point with ID 4
+    color_map[4] = cv::Scalar(255, 0, 255);  // Magenta for point with ID 5
 
     /* AOS - Array of Structs */
     vector<object> objects(num_objects);
@@ -81,6 +94,7 @@ int main(int argc, char const *argv[]) {
         objects[i].pos_y = position_dist(gen); // Posicion y
         objects[i].pos_z = position_dist(gen); // Posicion z
         objects[i].mass = mass_dist(gen); // Masa
+        objects[i].id = i; // Identificador
 
         // Ponemos la precisión a 3 decimales. Imprimimos el objeto
         file_init << fixed << setprecision(3) << objects[i].pos_x << " " << objects[i].pos_y << " " << objects[i].pos_z << " " << objects[i].speed_x << " " << objects[i].speed_y << " " << objects[i].speed_z << " " << objects[i].mass << endl;
@@ -106,9 +120,13 @@ int main(int argc, char const *argv[]) {
             }
         }
     }
+    cv::namedWindow("Object Positions", cv::WINDOW_NORMAL);
+    cv::Mat canvas(size_enclosure/scale_factor, size_enclosure/scale_factor, CV_8UC3, cv::Scalar(255, 255, 255));  // Create a black canvas of size 'size_enclosure'
+
 
     /* Iteraciones */
     for (int iteration = 0; iteration < num_iterations; iteration++) {
+        
         /* Bucle para obtener nuevas propiedades de los objetos en la iteración (fuerzas, aceleración y velocidad) */
         for (int i = 0; i < num_objects; i++) {
             // Solo entrarán en el condicional objetos que no se han eliminado
@@ -150,6 +168,47 @@ int main(int argc, char const *argv[]) {
             }
         }
 
+        /* Limpia el canvas*/
+        canvas.setTo(cv::Scalar(255, 255, 255));
+        /* Obtiene el maximo y minimo de la masa de todos los objetos*/
+        float max_mass = 0;
+        float min_mass = 1E25;
+        for (int i = 0; i < num_objects; i++) {
+            if (objects[i].mass > max_mass) max_mass = objects[i].mass;
+            if (objects[i].mass < min_mass) min_mass = objects[i].mass;
+        }
+
+        /* Bucle para pintar los objetos en el canvas */
+        for (int i = 0; i < num_objects; i++) {
+            // Calculate the position of the object on the canvas
+            int x = static_cast<int>(objects[i].pos_x/scale_factor);
+            int y = static_cast<int>(objects[i].pos_y/scale_factor);
+
+            /* En funcion el max_mass y min_mass normaliza los valores para el radio*/
+            int radius = static_cast<int>(((objects[i].mass - min_mass) / (max_mass - min_mass))*8 + 5);
+
+            // Draw a circle representing the object on the canvas
+            int color_index = objects[i].id % color_map.size();
+            cv::circle(canvas, cv::Point(x, y), radius, color_map[color_index], -1);
+        }
+        /*
+        // Show the canvas in the OpenCV window
+        cv::imshow("Object Positions", canvas);
+        // Wait for a key press and store the pressed key
+        int key = cv::waitKey(10);
+        // Check if the pressed key is 'Esc' (ASCII code 27)
+        if (key == 27) {
+            std::cout << "Esc key pressed. Exiting..." << std::endl;
+            return 0;
+        }
+        */
+        // Save the frame as an image
+        // Create file name with leading zeros
+        std::ostringstream oss;
+        oss << std::setw(4) << std::setfill('0') << iteration;
+        std::string filename = "gif/frames/frame_" + oss.str() + ".png";
+        cv::imwrite(filename, canvas);
+
         // Actualizamos el número de objetos en el vector
         num_objects = objects.size();
         //cout << "Fin iteración: " << iteration << " Num objetos:" << num_objects << "\n";
@@ -165,6 +224,7 @@ int main(int argc, char const *argv[]) {
     }
 
     file_init.close(); // Cerramos el fichero "final_config.txt"
+    cv::destroyWindow("Object Positions");
 }
 
 /* FUNCIONES */
