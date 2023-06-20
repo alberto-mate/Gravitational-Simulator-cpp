@@ -3,7 +3,7 @@ Analyze optimization in a C++ code using different types of structures. These st
 1. `aos`: Array of Structures
 2. `soa`: Structure of Arrays
 
-The idea of this project is to analyze the performance of `aos` and `soa` structures in a C++ code simulating a problem of gravitational attraction between objects in three-dimensional space. The difference between between them is the way the objects are stored. The first one uses an array of structures while the second one uses an array structure. arrays.
+The idea of this project is to analyze the performance of `aos` and `soa` structures in a C++ code simulating a problem of gravitational attraction between objects in two-dimensional space. The difference between between them is the way the objects are stored. The first one uses an array of structures while the second one uses a structure of arrays.
 <p align="center">
   <img height="300px" src="./images/output_frames.gif">
 </p>

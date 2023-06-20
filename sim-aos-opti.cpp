@@ -191,7 +191,7 @@ int main(int argc, char const *argv[]) {
             int color_index = objects[i].id % color_map.size();
             cv::circle(canvas, cv::Point(x, y), radius, color_map[color_index], -1);
         }
-        /*
+        
         // Show the canvas in the OpenCV window
         cv::imshow("Object Positions", canvas);
         // Wait for a key press and store the pressed key
@@ -201,13 +201,14 @@ int main(int argc, char const *argv[]) {
             std::cout << "Esc key pressed. Exiting..." << std::endl;
             return 0;
         }
-        */
+        /*
         // Save the frame as an image
         // Create file name with leading zeros
         std::ostringstream oss;
         oss << std::setw(4) << std::setfill('0') << iteration;
         std::string filename = "gif/frames/frame_" + oss.str() + ".png";
         cv::imwrite(filename, canvas);
+        */
 
         // Actualizamos el número de objetos en el vector
         num_objects = objects.size();
